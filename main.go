@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/temurova-ui/todo_api/internal/config"
 	"github.com/temurova-ui/todo_api/internal/handlers"
 	"github.com/temurova-ui/todo_api/internal/middleware"
 	"github.com/temurova-ui/todo_api/internal/repository"
@@ -11,23 +12,28 @@ import (
 	"github.com/temurova-ui/todo_api/internal/service"
 )
 
-func main(){
-repo := repository.NewTaskRepository("data/tasks.json")
+func main() {
+	cfg, err := config.New("./internal/config/config.env")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-service := service.NewTaskService(repo)
+	repo := repository.NewTaskRepository(cfg.Storage)
 
-handler := handlers.NewTaskHandler(service)
+	taskService := service.NewTaskService(repo)
 
-mux := http.NewServeMux()
+	taskHandler := handlers.NewTaskHandler(taskService)
 
-routes.RegisterRoutes(mux, handler)
+	mux := http.NewServeMux()
 
-logged := middleware.Logger(mux)
+	routes.RegisterRoutes(mux, taskHandler)
 
-log.Println("Server started on :8080")
+	logged := middleware.Logger(mux)
 
-err := http.ListenAndServe(":8080", logged)
-	if err != nil{
+	log.Println("Server started on", cfg.HttpPort)
+
+	err = http.ListenAndServe(cfg.HttpPort, logged)
+	if err != nil {
 		log.Fatal(err)
 	}
 }
